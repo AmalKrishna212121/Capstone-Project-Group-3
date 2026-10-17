@@ -92,4 +92,4 @@ pip install numpy scipy matplotlib sympy
 4. D. Bertsimas & J. Tsitsiklis, *Introduction to Linear Optimization*, Athena Scientific.
 5. P. Virtanen et al., *SciPy 1.0*, Nature Methods 17 (2020).
 
-Repository: *[Git URL]*
+
