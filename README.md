@@ -1,7 +1,17 @@
 # Thermal-Aware Power Budgeting on a Chip
 
 **From Fields to Circuits: PDE → Laplace → Sparse FDM → LP**  
-*Capstone Problem A | S3 EC (AY 2025–26) | Odd Group 3*
+*Capstone Problem A | S3 EC (AY 2025-26) | Odd Group 3*  
+
+---
+
+## 👥 Team Members
+
+* **Amal Krishna S**
+* **Hrishikesh S Nair**
+* **Amir Mohammed N**
+* **Robin Kirian Abraham**
+* **Harith C V**
 
 ---
 
@@ -15,96 +25,61 @@ The system is discretized using a standard 5-point finite difference stencil int
 
 $$Au = -Bq$$
 
-By leveraging the inherent linearity of the Poisson PDE, we formulate an epigraph-based Linear Program (LP) to budget power across active blocks such that the maximum die temperature is minimized:
-
-$$\min_{z} t \quad \text{s.t.} \quad Au + Bq = 0, \quad \mathbf{1}^\top q = P_{\max}, \quad -t \le u_i \le t, \quad q \ge 0$$
-
-### Key Findings
-- **Symmetric Layout (Scenario 1):** Due to geometric symmetry and convexity (Jensen's inequality), uniform power allocation is mathematically provable as optimal ($341.83\text{ K}$ peak).
-- **Asymmetric Layout (Scenario 2):** The linear program redistributes power toward blocks near the die edge (cooler heat-sink paths), dropping the peak temperature from $359.04\text{ K}$ to $347.40\text{ K}$ (a reduction of **$11.64\text{ K}$**).
+An epigraph-form Linear Program (LP) optimizes the power distribution among the blocks to minimize the maximum peak chip temperature.
 
 ---
 
-## 👥 Team Members
+## 📐 Mathematical Formulation & Stages
 
-| Name | Role / Pipeline Stage | Initials |
-| :--- | :--- | :--- |
-| **Amal Krishna S** | Field Model (Vector Calculus) & PDE Classification | `AKS` |
-| **Hrishikesh S Nair** | Laplace Transform & Thermal Impedance ($Z_{\text{th}}$) | `HSN` |
-| **Amir Mohammed N** | FDM Discretization & Sparse Linear Algebra (`scipy.sparse`) | `AMN` |
-| **Robin Kirian Abraham** | Linear Program Formulation (`scipy.optimize.linprog` / HiGHS) | `RKA` |
-| **Harith C V** | Verification, Numerical Convergence & Visualizations | `HCV` |
+### 1. Field Model (Vector Calculus)
+From Fourier's Law and steady energy conservation:
 
----
+$$q_h = -k\nabla T$$
 
-## 🔬 Mathematical & Engineering Pipeline
+$$\operatorname{div} q_h = Q \implies -k \operatorname{div}(\operatorname{grad} T) = Q \implies \nabla^2 T = -\frac{Q}{k}$$
 
-| Stage | Mathematical Concept | Course Domain | Formulation / Tool |
-| :--- | :--- | :--- | :--- |
-| **1. Field Model** | Gradient, Divergence, Divergence Thm | Vector Calculus | $q_h = -k\nabla T$, $\operatorname{div} q_h = Q$ |
-| **2. PDE** | Elliptic classification, Dirichlet BCs | PDEs | $\nabla^2 u = -Q/k$, $u\vert_{\partial\Omega} = 0$ |
-| **3. Transform** | Laplace in time ($s \to 0$ limit) | Transforms | $Z_{\text{th}}(s) = \sum \frac{R_{mn}}{1 + s\tau_{mn}}$, SymPy verification |
-| **4. Discretization** | 5-point stencil, Kronecker spectrum | Linear Algebra | $Au = -Bq$, `scipy.sparse.splu` |
-| **5. Optimization** | Epigraph form, Minimax linear program | Optimization | $\min t$ s.t. $-t \le u \le t$, HiGHS solver |
-| **6. Verification** | Order of convergence, transient limit | Numerical Methods | $O(h^2)$ check, backward-Euler time-stepping |
+where $k = 150\text{ W m}^{-1}\text{K}^{-1}$ and die thickness $d = 150\text{ }\mu\text{m}$.
 
----
+### 2. PDE Formulation (Elliptic)
+The equation is classified as elliptic ($B^2 - AC < 0$) with Dirichlet boundary conditions:
 
-## 🛠️ Repository Structure
+$$T = T_{\text{amb}} = 300\text{ K} \quad \text{on } \partial\Omega$$
 
-```text
-├── README.md                  # Project documentation and summary
-├── requirements.txt           # Python dependencies
-├── run.py                     # Main executable script generating all figures and tables
-├── src/
-│   ├── pde_solver.py          # 5-point Laplacian assembler and sparse solver
-│   ├── lp_optimizer.py        # Epigraph LP formulation using scipy.optimize.linprog
-│   ├── transient.py           # Backward-Euler time stepping and Laplace transform verification
-│   └── plotting.py            # Heatmaps, convergence curves, and power sweep figures
-└── figures/                   # Generated output plots (PDF / PNG)
-```
+### 3. Transform Solution (Laplace Domain)
+Applying Laplace transforms turns transient diffusion into a multi-mode thermal impedance network:
 
----
+$$Z_{\text{th}}(x, x_s; s) = \sum_{m,n} \frac{R_{mn}}{1 + s\tau_{mn}}$$
 
-## 🚀 Quick Start
+Taking the steady-state limit ($s \to 0$) yields the DC thermal resistance matrix $Z_{\text{th}}(0)$.
 
-### 1. Prerequisites
-Ensure you have Python 3.9+ installed. Install the dependencies via:
+### 4. Discretization & Sparse Linear Algebra
+Using a grid of $N = 40$ ($h = 0.2564\text{ mm}$), the interior nodes ($n^2 = 1444$) form the system:
 
-```bash
-pip install -r requirements.txt
-```
+$$Au = -Bq$$
 
-#### Typical `requirements.txt`:
-```text
-numpy>=1.22.0
-scipy>=1.10.0
-matplotlib>=3.6.0
-sympy>=1.11.0
-```
+The matrix $A \in \mathbb{R}^{1444 \times 1444}$ is symmetric negative definite and solved using SciPy sparse LU decomposition (`splu`).
 
-### 2. Run Simulations and Generate Plots
-To execute the complete pipeline, perform analytical verifications, and recreate all figures (~10 seconds run time):
+### 5. Optimization (Linear Program)
+The minimax peak temperature problem is recast in epigraph form:
 
-```bash
-python run.py
-```
+$$\min_{z} t$$
+
+subject to:
+
+$$Au + Bq = 0$$
+
+$$\mathbf{1}^\top q = P_{\max}$$
+
+$$u_i - t \le 0, \quad -u_i - t \le 0$$
+
+$$q \ge 0, \quad t \ge 0$$
+
+The LP is solved using the SciPy `linprog` HiGHS solver.
 
 ---
 
-## 📊 Verification & Validation
+## 📊 Summary of Results
 
-1. **Spatial Convergence:** Truncation error verification on manufactured solutions ($u = \sin\frac{\pi x}{L}\sin\frac{\pi y}{L}$) shows clean $O(h^2)$ convergence (order $\approx 2.00$).
-2. **Matrix Condition & Stability:** Discretized matrix $A$ has symmetric negative-definite Kronecker eigenvalues, ensuring stability.
-3. **Impedance Symmetry:** The steady-state thermal resistance matrix $Z_{\text{th}}(0)$ obeys reciprocity ($Z = Z^\top$) within machine precision ($10^{-9}$).
-4. **Transient to Steady State:** Backward Euler integration converges directly to the DC limit predicted by the Laplace transform final-value theorem as $t \to \infty$.
-
----
-
-## 📚 References
-
-1. Incropera, F. P., et al. *Fundamentals of Heat and Mass Transfer*, Wiley.
-2. Evans, L. C. *Partial Differential Equations*, American Mathematical Society.
-3. LeVeque, R. J. *Finite Difference Methods for Ordinary and Partial Differential Equations*, SIAM.
-4. Bertsimas, D., & Tsitsiklis, J. *Introduction to Linear Optimization*, Athena Scientific.
-5. Virtanen, P., et al. "SciPy 1.0: Fundamental Algorithms for Scientific Computing in Python." *Nature Methods* 17 (2020).
+| Scenario | Uniform Peak | LP Optimal Peak | Peak Reduction | LP Power Split $q_1 \dots q_4$ (W) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Scenario 1 (Symmetric)** | $341.83\text{ K}$
