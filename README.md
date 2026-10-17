@@ -7,13 +7,13 @@ From Fields to Circuits: **PDE → Laplace → Sparse FDM → LP**
 
 ## Team
 
-| Name | Stage owned |
-|---|---|
-| Amal Krishna S | 1. Field model, 2. PDE |
-| Hrishikesh S Nair | 3. Transform |
-| Amir Mohammed N | 4. Discretisation |
-| Robin Kirian Abraham | 5. LP |
-| Harith C V | 6. Verification |
+| Name | Role | Stage(s) owned |
+|---|---|---|
+| Amal Krishna S | Group Leader + LP Optimization | 5. LP |
+| Amir Mohammed N | Field Model + PDE | 1. Field model, 2. PDE |
+| Robin Kirian Abraham | Laplace Transform | 3. Transform |
+| Harith C V | FDM + Sparse Matrix | 4. Discretisation |
+| Hrishikesh S Nair | Python Pipeline + Visualization | 6. Verification |
 
 ## Overview
 
